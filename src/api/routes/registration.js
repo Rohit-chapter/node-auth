@@ -5,7 +5,7 @@ const { handleValidationErrors } = require("../middleware/handleValidationErr");
 const { registrationValidate } = require("../validator/validation");
 
 router.post("/", registrationValidate,handleValidationErrors,userController.register);
-//router.post("/login", checkExist.loginValidation, userController.login);
+//router.post("/login", userController.login);
 
 
 module.exports = router;
