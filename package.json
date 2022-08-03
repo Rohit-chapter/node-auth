@@ -20,6 +20,7 @@
   "homepage": "https://github.com/Rohit-chapter/node-auth#readme",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "crypto-js": "^4.1.1",
     "dotenv": "^16.0.1",
     "express": "^4.18.1",
     "express-validator": "^6.14.2",

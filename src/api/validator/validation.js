@@ -1,10 +1,21 @@
 const { body } = require("express-validator");
+const User = require("../models/user")
 
 exports.registrationValidate = [
     body("firstName").not().isEmpty().withMessage("First name is required"),
     body("lastName").not().isEmpty().withMessage("Last name is required"),
-    body("email").not().isEmpty().withMessage("Email is required").isEmail()
-        .withMessage("Email is invalid"),
+    body("email")
+        .not()
+        .isEmpty()
+        .withMessage("email is required")
+        .isEmail()
+        .withMessage("Invalid Email")
+        .custom(async (value) => {
+            const emailCheck = await User.findOne({ email: value });
+            if (emailCheck) {
+                throw new Error("email is already taken");
+            }
+        }),
     body("companyName").not().isEmpty().withMessage("Company name is required"),
     body("password")
         .not()
@@ -14,8 +25,6 @@ exports.registrationValidate = [
         .isLength({ min: 8 })
         .not()
         .withMessage(" length should be 8 characters")
-        .isStrongPassword()
-        .withMessage("Please select a stronger password")
         .isUppercase()
         .not()
         .withMessage(" one upper case is required")
@@ -36,4 +45,17 @@ exports.registrationValidate = [
     body("linkedinUrl").not().isEmpty().withMessage("Linkedin Url is required").isURL({ protocols: ['https'] }).withMessage("url is invalid"),
     body("contactNo").not().isEmpty().withMessage("Contact number is required").isNumeric().withMessage("Phone number must be in digit").isMobilePhone().isLength({ min: 10, max: 10 })
         .withMessage("Phone number must be 10 digit"),
+]
+
+exports.loginValidation = [
+    body("email")
+        .not()
+        .isEmpty()
+        .withMessage("email is required")
+        .isEmail()
+        .withMessage("Invalid Email"),
+    body("password")
+        .not()
+        .isEmpty()
+        .withMessage("password is required")
 ]
