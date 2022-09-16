@@ -53,7 +53,13 @@ exports.loginValidation = [
         .isEmpty()
         .withMessage("email is required")
         .isEmail()
-        .withMessage("Invalid Email"),
+        .withMessage("Invalid Email")
+        .custom(async (value) => {
+            const emailCheck = await User.findOne({ email: value });
+            if (!emailCheck) {
+                throw new Error("Email not present");
+            }
+        }),
     body("password")
         .not()
         .isEmpty()

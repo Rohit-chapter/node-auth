@@ -11,7 +11,7 @@ exports.handleValidationErrors = async (req, res, next) => {
     });
     return res
       .status(422)
-      .json({ message: "Invalid request", errors: errorMessages });
+      .json({ errors: errorMessages });
   }
 
   next();
