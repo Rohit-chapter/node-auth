@@ -6,18 +6,20 @@ const UserSchema = new mongoose.Schema(
     lastName: { type: String, },
     email: { type: String, required: true, unique: true },
     companyName: { type: String, },
-    password: { type: String, required: true },
+    password: { type: String },
     confirmPassword: { type: String, },
     linkedinUrl: { type: String, },
     contactNo: {
       type: Number,
       min: 10,
     },
+    verifyToken: { type: String, },
     isAdmin: {
       type: Boolean,
       default: false,
     },
   },
+
   { timestamps: true }
 );
 
