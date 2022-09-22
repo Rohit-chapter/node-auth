@@ -1,8 +1,7 @@
 const User = require("../models/user");
 const { message } = require("../common/message");
 const jwt = require("jsonwebtoken");
-const CryptoJS = require("crypto-js");
-const { Email, AVAILABLE_TEMPLATES } = require("../utils/email")
+const nodemailer = require("nodemailer");
 const {
   generateToken,
   encryptPassword,
@@ -74,49 +73,6 @@ exports.login = async (req, res) => {
   }
 };
 
-
-// exports.login = async (req, res) => {
-//   try {
-//     const { email } = req.body;
-//     const user = await User.findOne(
-//       {
-//         email: email
-//       }
-//     );
-//     //!user && res.status(401).json("Wrong User Name");
-//     const hashedPassword = CryptoJS.AES.decrypt(
-//       user.password,
-//       process.env.PASS_SEC
-//     );
-//     const originalPassword = hashedPassword.toString(CryptoJS.enc.Utf8);
-//     const inputPassword = req.body.password;
-//     if (originalPassword != inputPassword) {
-//       return res.status(401).json("Invalid Password");
-//     }
-//     const accessToken = jwt.sign(
-//       {
-//         id: user._id,
-//       },
-//       process.env.JWT_SEC,
-//       { expiresIn: "1d" }
-//     );
-//     res.cookie("jwtCookies", accessToken, {
-//       expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
-//     });
-//     //return res.redirect("/v1/profile");
-//     return res.status(200).json({
-//       message: message.LOGIN_SUCCESS,
-//       email: user.email,
-//       accessToken
-//     });
-//   } catch (error) {
-//     console.log(error)
-//     return res.status(500).json({
-//       message: message.ERROR_MESSAGE,
-//     });
-//   }
-// };
-
 exports.loginWithOauth = async (req, res) => {
   try {
     const { email } = req.body;
@@ -182,7 +138,6 @@ exports.changePassword = async (req, res) => {
       profileDetail.password
     );
     const hashedPassword = await encryptPassword(password);
-    console.log("isPasswordCorrect..", isPasswordCorrect, oldPassword, password)
     if (!isPasswordCorrect) {
       return res.status(500).json({
         messages: message.OLD_PASSWORD_INCORRECT,
@@ -220,38 +175,47 @@ exports.changePassword = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body
-    // console.log("req", req)
     const user = await User.findOne({ email })
     if (!user) {
       return res.status(404).json({
         message: "email not found",
       });
     }
-    console.log("user....", user)
-    // const encryptedEmail = encrypt(email.trim());
+    let firstName = user.firstName
     const id = encrypt(user._id);
-    console.log("id...", id)
-    const verifyToken = encrypt(id);
+    const verifyToken = id;
     const details = await User.updateOne({ _id: user._id }, { $set: { verifyToken: verifyToken } })
-    console.log("details....", details)
-    console.log("verifyToken.....", verifyToken)
-    const forEmail = new Email();
-    console.log("forEmail..", forEmail)
-    await forEmail.setTemplate(AVAILABLE_TEMPLATES.FORGET_PASSWORD, {
-      firstName: `${user.firstName}`,
-      lastName: `${user.lastName}`,
-      verifyToken: verifyToken,
-      id: id,
-      // email: encryptedEmail
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: '587',
+      auth: {
+        user: process.env.EMAIL_USERNAME,
+        pass: process.env.EMAIL_PASSWORD
+      },
+      secureConnection: 'false',
+      tls: {
+        ciphers: 'SSLv3',
+        rejectUnauthorized: false
+      }
     });
-    await forEmail.send(user.email);
-    return res.status(200).json({
-      message: "success"
-    });
+    const mailOptions = {
+      from: process.env.EMAIL_USERNAME,
+      to: email,
+      subject: 'Please Reset your Password',
+      html: `<h3>Dear ${firstName}</h3><p>You have requested to Reset your password. To Reset your password Successfully, Follow the Link bellow to Reset it</p><p>Click <a href='http://localhost:8001/v1/reset-pass?token=${verifyToken}'>reset password`
+    };
+    transporter.sendMail(mailOptions, function (error) {
+      if (error) throw error;
+      return res.status(200).json({
+        message: "Email sent successfully",
+        verifyToken
+      });
+    })
   } catch (error) {
     console.log(error);
     return res.status(500).json({
-      message: error.message ? error.message : message.ERROR_MESSAGE,
+      message: message.ERROR_MESSAGE,
     });
   }
 }
@@ -262,18 +226,29 @@ exports.resetPassword = async (req, res) => {
     const user = await User.findOne({ email, verifyToken })
     if (!user) {
       return res.status(404).json({
-        message: "email not match",
+        message: "email not found",
       });
     }
     let salt = generateSalt(10);
     let newPassword = encryptPassword(password.trim(), salt);
     await User.updateOne({ email: email }, { $set: { password: newPassword, verifyToken: '' } })
     return res.status(200).json({
-      message: "password update "
+      message: "password updated successfully "
     });
   } catch (error) {
     return res.status(500).json({
-      message: error.message ? error.message : message.ERROR_MESSAGE,
+      message: message.ERROR_MESSAGE,
     });
   }
 }
+
+exports.resetPasswordPage = async (req, res) => {
+  try {
+    return res.send("reset password ");
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      errors: { message: message.ERROR_MESSAGE },
+    });
+  }
+};
